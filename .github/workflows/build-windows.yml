@@ -22,6 +22,16 @@ jobs:
         with:
           node-version: 20
 
+      - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $tagVersion = "${{ github.ref_name }}".TrimStart('v')
+          if ($package.version -ne $tagVersion) {
+            throw "Git tag $tagVersion does not match package.json version $($package.version)"
+          }
+
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
@@ -42,36 +52,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Publish automatic update files to Supabase Storage
-        shell: pwsh
-        env:
-          SUPABASE_URL: https://yspametgketxgobmmsei.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_SERVICE_ROLE_KEY)) {
-            throw "Add the GitHub Actions secret SUPABASE_SERVICE_ROLE_KEY to enable automatic updates."
-          }
-
-          $headers = @{
-            apikey = $env:SUPABASE_SERVICE_ROLE_KEY
-            Authorization = "Bearer $env:SUPABASE_SERVICE_ROLE_KEY"
-            "x-upsert" = "true"
-          }
-
-          $files = Get-ChildItem -Path "dist" -File | Where-Object {
-            $_.Name -eq "latest.yml" -or $_.Extension -eq ".exe" -or $_.Extension -eq ".blockmap"
-          }
-
-          foreach ($file in $files) {
-            $encodedName = [System.Uri]::EscapeDataString($file.Name)
-            $url = "$($env:SUPABASE_URL.TrimEnd('/'))/storage/v1/object/speekly-updates/$encodedName"
-            $contentType = if ($file.Extension -eq ".yml") { "text/yaml" } elseif ($file.Extension -eq ".exe") { "application/vnd.microsoft.portable-executable" } else { "application/octet-stream" }
-            Invoke-RestMethod -Method Post -Uri $url -Headers $headers -ContentType $contentType -InFile $file.FullName
-            Write-Host "Published $($file.Name)"
-          }
-
-      - name: Publish installer to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Publish automatic updates to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.exe
+          files: |
+            dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
