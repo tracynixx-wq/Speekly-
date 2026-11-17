@@ -715,7 +715,7 @@ async function refreshProfiles() {
   const { data } = await sb.from('profiles').select(PCOLS).in('id', ids);
   (data || []).forEach(p => patchProfile(p.id, p));
   renderSide(); renderChatHeader();
-  if (S.tab === 'friends') renderFriendCard();
+  if (S.tab === 'friends') renderPersonCard();
 }
 async function touchSeen() {
   if (!S.me) return;
@@ -795,7 +795,7 @@ function renderRail() {
   const vis = S.settings.show_online;
   rail.innerHTML = `
     <button class="ravatar" data-nav="profile" title="${esc(t('profile'))}">${avatar(S.me, 56)}</button>
-    <div class="rnavs">${nav('chats', 'chat', t('chats'), b(u))}${nav('friends', 'users', t('friends'), b(r))}${nav('settings', 'gear', t('settings'))}${nav('help', 'help', t('help'))}</div>
+    <div class="rnavs">${nav('chats', 'chat', t('chats'), b(u))}${nav('friends', 'search', t('friends'), b(r))}${nav('settings', 'gear', t('settings'))}${nav('help', 'help', t('help'))}</div>
     <div class="spacer"></div>
     <button class="statuspill" data-act="toggle-status" title="${esc(t('p_online'))}"><i class="sd ${vis ? 'on' : ''}"></i>${esc(vis ? t('st_online') : t('st_invisible'))}<span class="chev">⌄</span></button>`;
 }
@@ -807,12 +807,12 @@ function renderSide() {
   if (S.sideTab !== S.tab) {
     S.sideTab = S.tab; S.csearch = '';
     if (S.tab === 'chats') side.innerHTML = `<div class="side-h"><span>${esc(t('chats'))}</span><button class="iconbtn" data-act="new-chat" title="${esc(t('new_chat'))}">${ic('compose', 20)}</button></div><div class="search">${ic('search', 18)}<input id="csearch" placeholder="${esc(t('search_chats'))}" autocomplete="off"></div><div class="scroll" id="clist"></div>`;
-    if (S.tab === 'friends') side.innerHTML = `<div class="side-h"><span>${esc(t('friends'))}</span></div><div class="search">${ic('search', 18)}<input id="fsearch" placeholder="${esc(t('search_ph'))}" autocomplete="off"></div><div class="scroll"><div id="fres"></div><div id="flist"></div></div>`;
+    if (S.tab === 'friends') side.innerHTML = `<div class="side-h"><span>${esc(t('friends'))}</span></div><div class="search">${ic('search', 18)}<input id="fsearch" placeholder="${esc(t('search_ph'))}" autocomplete="off"></div><div class="scroll"><div id="fres"></div></div>`;
     if (S.tab === 'settings') side.innerHTML = `<div class="side-h">${esc(t('settings'))}</div><div class="scroll" id="slist"></div>`;
     if (S.tab === 'profile' || S.tab === 'help') side.innerHTML = '';
   }
   if (S.tab === 'chats') fillChats();
-  if (S.tab === 'friends') fillFriends();
+  if (S.tab === 'friends') { const input = $('#fsearch'); if (input && input.value) onSearchInput({ target: input }); }
   if (S.tab === 'settings') fillSettingsList();
 }
 function fillChats() {
@@ -880,8 +880,8 @@ function onSearchInput(e) {
       return '';
     };
     res.innerHTML = `<div class="side-sec">${esc(t('search_results'))}</div>` + (data.length ? data.map(p => `
-      <div class="item">${avatar(p, 38)}<div class="meta"><b>${esc(name(p))}</b><div class="prev">@${esc(p.username)}</div></div>
-      <div class="acts">${state(p.id) ? `<span class="prev">${esc(state(p.id))}</span>` : `<button class="btn sm" data-act="add" data-id="${p.id}">${esc(t('add'))}</button>`}</div></div>`).join('') : `<div class="empty small">${esc(t('nobody'))}</div>`);
+      <div class="item ${S.view === p.id ? 'active' : ''}" data-person="${p.id}">${avatar(p, 38)}<div class="meta"><b>${esc(name(p))}</b><div class="prev">@${esc(p.username)}</div></div>
+      <span class="prev">${esc(state(p.id) || t('view_profile'))}</span></div>`).join('') : `<div class="empty small">${esc(t('nobody'))}</div>`);
   }, 250);
 }
 
@@ -914,7 +914,7 @@ function renderMain() {
   const main = $('#main'); if (!main || !S.me) return;
   if (S.tab === 'chats') {
     if (S.active && S.profs[S.active]) renderChat(); else main.innerHTML = `<div class="empty">${esc(t('pick_chat'))}</div>`;
-  } else if (S.tab === 'friends') renderFriendCard();
+  } else if (S.tab === 'friends') renderPersonCard();
   else if (S.tab === 'profile') renderProfilePage();
   else if (S.tab === 'help') renderHelp();
   else renderSettingsPage();
@@ -1231,7 +1231,7 @@ async function savePass() {
 root.addEventListener('click', async e => {
   const pop = $('#emopop');
   if (pop && !pop.hidden && !e.target.closest('#emopop,[data-act="emoji"]')) pop.hidden = true;
-  const el = e.target.closest('[data-nav],[data-chat],[data-friend],[data-stab],[data-toggle],[data-set],[data-act],[data-acc],[data-lang],[data-mode],[data-emo],[data-zoom]');
+  const el = e.target.closest('[data-nav],[data-chat],[data-friend],[data-person],[data-stab],[data-toggle],[data-set],[data-act],[data-acc],[data-lang],[data-mode],[data-emo],[data-zoom]');
   if (!el) return;
   const d = el.dataset;
   if (d.emo !== undefined) { insertEmoji(d.emo); return; }
@@ -1241,7 +1241,7 @@ root.addEventListener('click', async e => {
   else if (d.acc) switchAccount(d.acc);
   else if (d.nav) { S.tab = d.nav; S.sideTab = null; renderRail(); renderSide(); renderMain(); }
   else if (d.chat) openChat(d.chat);
-  else if (d.friend) { S.view = d.friend; fillFriends(); renderFriendCard(); }
+  else if (d.person) { S.view = d.person; renderPersonCard(); fillPeopleSelection(); }
   else if (d.stab) { S.stab = d.stab; fillSettingsList(); renderMain(); }
   else if (d.toggle) setSetting(d.toggle, !S.settings[d.toggle]);
   else if (d.set) setSetting(d.set, d.val);
