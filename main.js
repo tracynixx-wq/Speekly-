@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, Menu, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
@@ -9,7 +9,10 @@ app.setAppUserModelId('com.speekly.desktop');
 let win;
 let updateCheckTimer;
 let updateCheckStarted = false;
-let lastUpdaterErrorNotice = 0;
+let updateCheckInProgress = false;
+let updatePromptOpen = false;
+let downloadedUpdateInfo = null;
+const declinedVersions = new Set();
 
 function writeUpdaterLog(message) {
   try {
@@ -20,11 +23,62 @@ function writeUpdaterLog(message) {
   }
 }
 
-function notify(title, body) {
+async function showUpdateDialog(options) {
+  const parent = win && !win.isDestroyed() ? win : undefined;
+  if (parent) return dialog.showMessageBox(parent, options);
+  return dialog.showMessageBox(options);
+}
+
+async function askToDownloadUpdate(info) {
+  if (updatePromptOpen || declinedVersions.has(info.version)) return;
+  updatePromptOpen = true;
   try {
-    if (Notification.isSupported()) new Notification({ title, body }).show();
-  } catch (error) {
-    writeUpdaterLog(`Notification failed: ${error?.message || error}`);
+    const result = await showUpdateDialog({
+      type: 'info',
+      title: 'Доступно обновление Speekly',
+      message: `Доступна новая версия Speekly — ${info.version}.`,
+      detail: 'Скачать обновление сейчас? Приложение продолжит работать во время загрузки. Вы можете отказаться и остаться на текущей версии.',
+      buttons: ['Скачать обновление', 'Позже'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true
+    });
+    if (result.response === 0) {
+      writeUpdaterLog(`User accepted download of version ${info.version}.`);
+      autoUpdater.downloadUpdate().catch((error) => {
+        writeUpdaterLog(`Download request failed: ${error?.stack || error?.message || error}`);
+      });
+    } else {
+      declinedVersions.add(info.version);
+      writeUpdaterLog(`User postponed version ${info.version}; current app remains active.`);
+    }
+  } finally {
+    updatePromptOpen = false;
+  }
+}
+
+async function askToInstallUpdate(info) {
+  if (updatePromptOpen) return;
+  updatePromptOpen = true;
+  try {
+    const result = await showUpdateDialog({
+      type: 'info',
+      title: 'Обновление Speekly загружено',
+      message: `Версия ${info.version} готова к установке.`,
+      detail: 'Установить обновление и перезапустить Speekly сейчас? Если выбрать «Позже», приложение продолжит работать на текущей версии.',
+      buttons: ['Установить и перезапустить', 'Позже'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true
+    });
+    if (result.response === 0) {
+      writeUpdaterLog(`User accepted installation of version ${info.version}.`);
+      autoUpdater.quitAndInstall(false, true);
+    } else {
+      writeUpdaterLog(`User postponed installation of version ${info.version}.`);
+    }
+  } finally {
+    updatePromptOpen = false;
   }
 }
 
@@ -32,16 +86,15 @@ function configureAutoUpdates() {
   if (!app.isPackaged || updateCheckStarted) return;
   updateCheckStarted = true;
 
-  // Explicitly bind the updater to the public GitHub Releases feed.
-  // This avoids depending on a missing or stale generated feed setting.
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'tracynixx-wq',
     repo: 'Speekly-'
   });
 
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  // Never download or install without the user's explicit choice.
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowDowngrade = false;
   autoUpdater.allowPrerelease = false;
 
@@ -54,8 +107,10 @@ function configureAutoUpdates() {
   });
 
   autoUpdater.on('update-available', (info) => {
-    writeUpdaterLog(`Update available: ${info.version}. Download started.`);
-    notify('Speekly', `Доступно обновление ${info.version}. Загружаем в фоне.`);
+    writeUpdaterLog(`Update available: ${info.version}. Waiting for user's download decision.`);
+    askToDownloadUpdate(info).catch((error) => {
+      writeUpdaterLog(`Download prompt failed: ${error?.stack || error?.message || error}`);
+    });
   });
 
   autoUpdater.on('download-progress', (progress) => {
@@ -63,29 +118,30 @@ function configureAutoUpdates() {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    writeUpdaterLog(`Update ${info.version} downloaded. It will install after the app closes.`);
-    notify('Speekly', `Обновление ${info.version} загружено и установится после закрытия Speekly.`);
+    downloadedUpdateInfo = info;
+    writeUpdaterLog(`Update ${info.version} downloaded. Waiting for user's installation decision.`);
+    askToInstallUpdate(info).catch((error) => {
+      writeUpdaterLog(`Install prompt failed: ${error?.stack || error?.message || error}`);
+    });
   });
 
   autoUpdater.on('error', (error) => {
-    const message = error?.stack || error?.message || String(error);
-    writeUpdaterLog(`Updater error: ${message}`);
-    const now = Date.now();
-    if (now - lastUpdaterErrorNotice > 30 * 60 * 1000) {
-      lastUpdaterErrorNotice = now;
-      notify('Speekly — ошибка обновления', 'Не удалось проверить или загрузить обновление. Подробности сохранены в updater.log.');
-    }
+    writeUpdaterLog(`Updater error: ${error?.stack || error?.message || error}`);
   });
 
   const check = () => {
-    if (!app.isReady()) return;
+    if (!app.isReady() || updateCheckInProgress) return;
+    updateCheckInProgress = true;
     writeUpdaterLog(`Starting update check. Current version: ${app.getVersion()}.`);
-    autoUpdater.checkForUpdates().catch((error) => {
-      writeUpdaterLog(`Update check rejected: ${error?.stack || error?.message || error}`);
-    });
+    autoUpdater.checkForUpdates()
+      .catch((error) => {
+        writeUpdaterLog(`Update check rejected: ${error?.stack || error?.message || error}`);
+      })
+      .finally(() => {
+        updateCheckInProgress = false;
+      });
   };
 
-  // Check shortly after startup, then periodically while the app is running.
   setTimeout(check, 10000);
   updateCheckTimer = setInterval(check, 4 * 60 * 60 * 1000);
 }
