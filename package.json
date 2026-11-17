@@ -1,6 +1,6 @@
 {
   "name": "speekly-desktop",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Speekly — десктопный мессенджер на Supabase",
   "main": "main.js",
   "author": "you",
