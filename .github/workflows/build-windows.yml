@@ -46,11 +46,11 @@ jobs:
       - name: Publish automatic update files to Supabase Storage
         shell: pwsh
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: https://yspametgketxgobmmsei.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_URL) -or [string]::IsNullOrWhiteSpace($env:SUPABASE_SERVICE_ROLE_KEY)) {
-            throw "Add GitHub Actions secrets SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable automatic updates."
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_SERVICE_ROLE_KEY)) {
+            throw "Add the GitHub Actions secret SUPABASE_SERVICE_ROLE_KEY to enable automatic updates."
           }
 
           $headers = @{
