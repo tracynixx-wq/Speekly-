@@ -16,8 +16,8 @@ const I18N = {
     msg_confirm: 'Регистрация почти завершена: в настройках Supabase ещё включено подтверждение. Администратору нужно отключить Confirm email; ник и пароль — единственные данные пользователя.',
     saved_accounts: 'Сохранённые аккаунты', back: 'Назад',
     err_profile: 'Профиль не найден. Проверь, что выполнен schema.sql',
-    chats: 'Чаты', friends: 'Друзья', settings: 'Настройки', profile: 'Профиль',
-    no_friends: 'Пока нет друзей.<br>Добавь их во вкладке «Друзья».', no_messages: 'Нет сообщений',
+    chats: 'Чаты', friends: 'Поиск', settings: 'Настройки', profile: 'Профиль',
+    no_friends: 'Пока нет чатов. Найди человека по нику во вкладке «Поиск».', no_messages: 'Нет сообщений',
     you_prefix: 'Вы: ', pick_chat: 'Выбери чат слева', write_first: 'Напиши первое сообщение',
     msg_ph: 'Сообщение…', send: 'Отправить', not_sent: 'Не отправлено: {0}',
     search_ph: 'Найти человека по нику…', incoming: 'Входящие заявки', outgoing: 'Исходящие заявки',
@@ -69,7 +69,7 @@ const I18N = {
     attach: 'Прикрепить файл', attach_img: 'Фото или видео', emoji: 'Смайлы', download: 'Скачать',
     uploading: 'Загрузка файла…', pv_photo: '📷 Фото', pv_file: 'Файл', new_chat: 'Новый чат',
     help_title: 'Как пользоваться Speekly',
-    help_1_t: 'Как добавить друга', help_1_d: 'Вкладка «Друзья» → поиск по нику → «Добавить». Когда человек примет заявку, появится чат.',
+    help_1_t: 'Как найти человека', help_1_d: 'Открой «Поиск», введи ник и открой профиль. Там можно отправить заявку, написать или заблокировать пользователя.',
     help_2_t: 'Фото и файлы', help_2_d: 'Скрепка отправляет любой файл, кнопка с картинкой — фото и видео (до 25 МБ). Картинку можно вставить из буфера обмена (Ctrl+V).',
     help_3_t: 'Профиль', help_3_d: 'Нажми на свою аватарку слева: обложка и фото (можно GIF), имя, о себе, смена аккаунта.',
     help_4_t: 'Невидимка', help_4_d: 'Кнопка статуса внизу слева скрывает «в сети» и время захода.',
@@ -105,8 +105,8 @@ const I18N = {
     msg_confirm: 'Registration is waiting for the Supabase confirmation setting. The administrator must turn off Confirm email; users only provide a username and password.',
     saved_accounts: 'Saved accounts', back: 'Back',
     err_profile: 'Profile not found. Make sure schema.sql has been run',
-    chats: 'Chats', friends: 'Friends', settings: 'Settings', profile: 'Profile',
-    no_friends: 'No friends yet.<br>Add some in the Friends tab.', no_messages: 'No messages',
+    chats: 'Chats', friends: 'Search', settings: 'Settings', profile: 'Profile',
+    no_friends: 'No chats yet. Find someone by username in Search.', no_messages: 'No messages',
     you_prefix: 'You: ', pick_chat: 'Pick a chat on the left', write_first: 'Write the first message',
     msg_ph: 'Message…', send: 'Send', not_sent: 'Not sent: {0}',
     search_ph: 'Find a person by username…', incoming: 'Incoming requests', outgoing: 'Outgoing requests',
@@ -137,7 +137,7 @@ const I18N = {
     notif_test_body: 'This is how a notification looks',
     p_req: 'Friend requests', p_req_d: 'If off, nobody can send you a request',
     p_online: 'Online status and last seen',
-    p_online_d: 'Friends see when you are online and when you were last seen (applies immediately)',
+    p_online_d: 'Other users can see when you are online and when you were last active (applies immediately)',
     p_read: 'Read receipts', p_read_d: 'The other person sees ✓✓ when you have read the message',
     c_enter: 'Send with Enter',
     c_enter_d: 'On: Enter sends, Shift+Enter adds a new line. Off: send with Ctrl+Enter',
@@ -158,13 +158,13 @@ const I18N = {
     attach: 'Attach a file', attach_img: 'Photo or video', emoji: 'Emoji', download: 'Download',
     uploading: 'Uploading file…', pv_photo: '📷 Photo', pv_file: 'File', new_chat: 'New chat',
     help_title: 'How to use Speekly',
-    help_1_t: 'Adding a friend', help_1_d: 'Friends tab → search by username → Add. Once they accept, a chat appears.',
+    help_1_t: 'Finding someone', help_1_d: 'Open Search, enter a username and view the profile. You can send a request, message or block the user there.',
     help_2_t: 'Photos and files', help_2_d: 'The paperclip sends any file, the picture button sends photos and videos (up to 25 MB). You can paste an image from the clipboard (Ctrl+V).',
     help_3_t: 'Profile', help_3_d: 'Click your avatar on the left: cover and photo (GIFs work), name, about, account switching.',
     help_4_t: 'Invisible mode', help_4_d: 'The status button at the bottom left hides your online status and last seen.',
     help_5_t: 'Language and theme', help_5_d: 'Settings → Appearance: Russian or English, theme and accent color.',
-    help_6_t: 'Encryption', help_6_d: 'Messages and files are encrypted on your computer, the server only sees ciphertext. The security code (the “E2E Encrypted” button in a chat) lets you check that nobody swapped your friend.',
-    no_enc_peer: 'Your friend has not enabled encryption yet. Ask them to update the app and sign in.',
+    help_6_t: 'Encryption', help_6_d: 'Messages and files are encrypted on your device. The server stores only ciphertext. Compare the security code with the other person through a separate channel.',
+    no_enc_peer: 'The other person has not enabled encryption yet. Ask them to update the app and sign in.',
     enc_locked: 'Encryption is locked: Settings → Account → Unlock.',
     err_creds_pw: 'Wrong password', skip: 'Skip',
     unlock_title: 'Unlock your chats', unlock_text: 'Enter your account password to restore your encryption key on this computer.',
@@ -539,12 +539,26 @@ function accountList() {
 async function switchAccount(id) {
   if (S.me && S.me.id === id) return;
   const acc = getAccounts().find(a => a.id === id);
-  if (!acc) return;
-  S.switching = true; stop(); await sb.auth.signOut({ scope: 'local' }); S.switching = false;
+  if (!acc || !acc.refresh_token) return toast(t('switch_fail'));
+  // Refresh before signing out: Supabase rotates refresh tokens, and signing out first
+  // can race with the stored token and make account switching fail.
   const { data, error } = await sb.auth.refreshSession({ refresh_token: acc.refresh_token });
-  if (error || !data.session) { toast(t('switch_fail')); removeAccount(id); renderAuth(); return; }
+  if (error || !data.session) {
+    console.error('[Speekly account switch]', error);
+    toast(t('switch_fail'));
+    removeAccount(id);
+    renderProfilePage();
+    return;
+  }
+  S.switching = true;
+  stop();
+  S.switching = false;
   S.addingAccount = false;
-  if (!S.me && !S.starting) { S.starting = true; try { await start(data.session); } finally { S.starting = false; } }
+  S.pw = null;
+  S.starting = true;
+  try { await start(data.session); }
+  catch (e) { console.error('[Speekly account start]', e); toast(t('error', e.message)); renderAuth(); }
+  finally { S.starting = false; }
 }
 async function addProfile() {
   S.prevId = S.me ? S.me.id : null;
