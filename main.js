@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, Notification } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -7,34 +8,85 @@ app.setAppUserModelId('com.speekly.desktop');
 
 let win;
 let updateCheckTimer;
+let updateCheckStarted = false;
+let lastUpdaterErrorNotice = 0;
+
+function writeUpdaterLog(message) {
+  try {
+    const logPath = path.join(app.getPath('userData'), 'updater.log');
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${message}\n`, 'utf8');
+  } catch (error) {
+    console.error('[Speekly updater] Could not write updater log:', error);
+  }
+}
+
+function notify(title, body) {
+  try {
+    if (Notification.isSupported()) new Notification({ title, body }).show();
+  } catch (error) {
+    writeUpdaterLog(`Notification failed: ${error?.message || error}`);
+  }
+}
 
 function configureAutoUpdates() {
-  if (!app.isPackaged) return;
+  if (!app.isPackaged || updateCheckStarted) return;
+  updateCheckStarted = true;
 
-  // Updates are downloaded to the application's private updater cache,
-  // never to the user's Downloads folder. Installation is deferred until exit.
+  // Explicitly bind the updater to the public GitHub Releases feed.
+  // This avoids depending on a missing or stale generated feed setting.
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'tracynixx-wq',
+    repo: 'Speekly-'
+  });
+
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowDowngrade = false;
+  autoUpdater.allowPrerelease = false;
 
-  autoUpdater.on('error', (error) => {
-    console.error('[Speekly updater]', error?.message || error);
+  autoUpdater.on('checking-for-update', () => {
+    writeUpdaterLog('Checking GitHub Releases for updates.');
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    writeUpdaterLog(`No update available. Installed version: ${app.getVersion()}; latest checked version: ${info?.version || 'unknown'}.`);
   });
 
   autoUpdater.on('update-available', (info) => {
-    console.info('[Speekly updater] Update available:', info.version);
+    writeUpdaterLog(`Update available: ${info.version}. Download started.`);
+    notify('Speekly', `Доступно обновление ${info.version}. Загружаем в фоне.`);
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    writeUpdaterLog(`Download progress: ${Math.round(progress.percent || 0)}%.`);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.info('[Speekly updater] Update downloaded; it will install after Speekly closes:', info.version);
+    writeUpdaterLog(`Update ${info.version} downloaded. It will install after the app closes.`);
+    notify('Speekly', `Обновление ${info.version} загружено и установится после закрытия Speekly.`);
   });
 
-  const check = () => autoUpdater.checkForUpdates().catch((error) => {
-    console.error('[Speekly updater] Check failed:', error?.message || error);
+  autoUpdater.on('error', (error) => {
+    const message = error?.stack || error?.message || String(error);
+    writeUpdaterLog(`Updater error: ${message}`);
+    const now = Date.now();
+    if (now - lastUpdaterErrorNotice > 30 * 60 * 1000) {
+      lastUpdaterErrorNotice = now;
+      notify('Speekly — ошибка обновления', 'Не удалось проверить или загрузить обновление. Подробности сохранены в updater.log.');
+    }
   });
 
-  // Do not delay startup. Check once after launch, then every four hours.
-  setTimeout(check, 15000);
+  const check = () => {
+    if (!app.isReady()) return;
+    writeUpdaterLog(`Starting update check. Current version: ${app.getVersion()}.`);
+    autoUpdater.checkForUpdates().catch((error) => {
+      writeUpdaterLog(`Update check rejected: ${error?.stack || error?.message || error}`);
+    });
+  };
+
+  // Check shortly after startup, then periodically while the app is running.
+  setTimeout(check, 10000);
   updateCheckTimer = setInterval(check, 4 * 60 * 60 * 1000);
 }
 
