@@ -5,7 +5,7 @@
 const I18N = {
   ru: {
     app_sub: 'Мессенджер для своих', cfg_title: 'Настрой config.js',
-    cfg_text: 'Впиши SUPABASE_URL и SUPABASE_ANON_KEY в src/config.js и убедись, что выполнен npm install.',
+    cfg_text: 'Впиши SUPABASE_URL и SUPABASE_PUBLISHABLE_KEY в src/config.js и убедись, что выполнен npm install.',
     tab_login: 'Вход', tab_register: 'Регистрация', lbl_nick: 'Ник',
     lbl_nick_new: 'Придумай ник (a-z, 0-9, _ ; 3–20 символов)', lbl_pass: 'Пароль',
     lbl_pass_new: 'Пароль (минимум 6 символов)', lbl_pass2: 'Повтори пароль',
@@ -94,7 +94,7 @@ const I18N = {
   },
   en: {
     app_sub: 'A messenger for friends', cfg_title: 'Set up config.js',
-    cfg_text: 'Put SUPABASE_URL and SUPABASE_ANON_KEY into src/config.js and make sure npm install has been run.',
+    cfg_text: 'Put SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY into src/config.js and make sure npm install has been run.',
     tab_login: 'Sign in', tab_register: 'Sign up', lbl_nick: 'Username',
     lbl_nick_new: 'Choose a username (a-z, 0-9, _ ; 3–20 characters)', lbl_pass: 'Password',
     lbl_pass_new: 'Password (at least 6 characters)', lbl_pass2: 'Repeat password',
@@ -192,7 +192,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* ignore 
 const remember = () => lsGet('msg_remember') !== 'false';
 const sessionAllowed = () => { try { return remember() || sessionStorage.getItem('msg_alive') === '1'; } catch { return true; } };
 const markAlive = () => { try { sessionStorage.setItem('msg_alive', '1'); } catch { /* ignore */ } };
-const LOGIN_DOMAIN = '@message.app'; // вход по нику: ник превращается во внутренний логин
+const LOGIN_DOMAIN = '@speekly.app'; // вход по нику: ник превращается во внутренний логин
 const ACCENTS = ['#4f8cff', '#8e5be8', '#e5484d', '#f76b15', '#30a46c', '#12a594'];
 const PCOLS = 'id,username,display_name,bio,avatar_url,banner_url,last_seen,verified,public_key';
 const detectLang = () => ((navigator.language || 'en').toLowerCase().startsWith('ru') ? 'ru' : 'en');
@@ -250,7 +250,7 @@ if (!cfg.SUPABASE_URL || cfg.SUPABASE_URL.includes('YOUR-') || !window.supabase)
   root.innerHTML = `<div class="auth"><div class="card"><h1>${esc(t('cfg_title'))}</h1><p class="sub">${esc(t('cfg_text'))}</p></div></div>`;
   return;
 }
-const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_PUBLISHABLE_KEY || cfg.SUPABASE_ANON_KEY);
 
 function toast(text) {
   const box = $('#toast');
