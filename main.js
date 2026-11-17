@@ -1,10 +1,42 @@
 const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
 const path = require('path');
+const { autoUpdater } = require('electron-updater');
 
 if (!app.requestSingleInstanceLock()) app.quit();
 app.setAppUserModelId('com.speekly.desktop');
 
 let win;
+let updateCheckTimer;
+
+function configureAutoUpdates() {
+  if (!app.isPackaged) return;
+
+  // Updates are downloaded to the application's private updater cache,
+  // never to the user's Downloads folder. Installation is deferred until exit.
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowDowngrade = false;
+
+  autoUpdater.on('error', (error) => {
+    console.error('[Speekly updater]', error?.message || error);
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    console.info('[Speekly updater] Update available:', info.version);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.info('[Speekly updater] Update downloaded; it will install after Speekly closes:', info.version);
+  });
+
+  const check = () => autoUpdater.checkForUpdates().catch((error) => {
+    console.error('[Speekly updater] Check failed:', error?.message || error);
+  });
+
+  // Do not delay startup. Check once after launch, then every four hours.
+  setTimeout(check, 15000);
+  updateCheckTimer = setInterval(check, 4 * 60 * 60 * 1000);
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -41,7 +73,14 @@ app.on('second-instance', () => {
   }
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  configureAutoUpdates();
+});
+
+app.on('before-quit', () => {
+  if (updateCheckTimer) clearInterval(updateCheckTimer);
+});
 app.on('window-all-closed', () => app.quit());
 
 ipcMain.on('focus-window', () => {
