@@ -784,12 +784,7 @@ function onMsgUpdate(m) {
 }
 async function onFriendEvent() {
   if (!S.me) return;
-  const had = S.incoming.length;
   await loadFriends();
-  if (S.incoming.length > had) {
-    const last = S.incoming[S.incoming.length - 1];
-    showNotif(t('notif_req'), t('notif_req_body', name(last)), () => { S.tab = 'friends'; renderApp(); });
-  }
   renderRail(); renderSide(); renderMain();
 }
 
@@ -801,13 +796,13 @@ function renderApp() {
 }
 function renderRail() {
   const rail = $('#rail'); if (!rail || !S.me) return;
-  const u = totalUnread(), r = S.incoming.length;
+  const u = totalUnread();
   const b = n => (n ? `<span class="badge-dot">${n > 99 ? '99+' : n}</span>` : '');
   const nav = (id, icon, label, badge) => `<button class="rnav ${S.tab === id ? 'on' : ''}" data-nav="${id}">${ic(icon)}<span>${esc(label)}</span>${badge || ''}</button>`;
   const vis = S.settings.show_online;
   rail.innerHTML = `
     <button class="ravatar" data-nav="profile" title="${esc(t('profile'))}">${avatar(S.me, 56)}</button>
-    <div class="rnavs">${nav('chats', 'chat', t('chats'), b(u))}${nav('friends', 'search', t('friends'), b(r))}${nav('settings', 'gear', t('settings'))}${nav('help', 'help', t('help'))}</div>
+    <div class="rnavs">${nav('chats', 'chat', t('chats'), b(u))}${nav('friends', 'search', t('friends'))}${nav('settings', 'gear', t('settings'))}${nav('help', 'help', t('help'))}</div>
     <div class="spacer"></div>
     <button class="statuspill" data-act="toggle-status" title="${esc(t('p_online'))}"><i class="sd ${vis ? 'on' : ''}"></i>${esc(vis ? t('st_online') : t('st_invisible'))}<span class="chev">⌄</span></button>`;
 }
