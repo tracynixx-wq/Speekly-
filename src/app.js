@@ -13,7 +13,7 @@ const I18N = {
     err_fill: 'Введи ник и пароль (от 6 символов)', err_creds: 'Неверный ник или пароль',
     err_nick_fmt: 'Ник: 3–20 символов, только a-z, 0-9 и _', err_pass_match: 'Пароли не совпадают',
     err_taken: 'Этот ник уже занят',
-    msg_confirm: 'Аккаунт создан, но Supabase требует подтверждение почты. Выключи Confirm email в Authentication → Providers → Email и зарегистрируйся заново.',
+    msg_confirm: 'Регистрация почти завершена: в настройках Supabase ещё включено подтверждение. Администратору нужно отключить Confirm email; ник и пароль — единственные данные пользователя.',
     saved_accounts: 'Сохранённые аккаунты', back: 'Назад',
     err_profile: 'Профиль не найден. Проверь, что выполнен schema.sql',
     chats: 'Чаты', friends: 'Друзья', settings: 'Настройки', profile: 'Профиль',
@@ -102,7 +102,7 @@ const I18N = {
     err_fill: 'Enter a username and a password (6+ characters)', err_creds: 'Wrong username or password',
     err_nick_fmt: 'Username: 3–20 characters, only a-z, 0-9 and _', err_pass_match: "Passwords don't match",
     err_taken: 'This username is already taken',
-    msg_confirm: 'Account created, but Supabase requires email confirmation. Turn off Confirm email in Authentication → Providers → Email and sign up again.',
+    msg_confirm: 'Registration is waiting for the Supabase confirmation setting. The administrator must turn off Confirm email; users only provide a username and password.',
     saved_accounts: 'Saved accounts', back: 'Back',
     err_profile: 'Profile not found. Make sure schema.sql has been run',
     chats: 'Chats', friends: 'Friends', settings: 'Settings', profile: 'Profile',
@@ -611,11 +611,12 @@ async function onAuthSubmit(e) {
   e.preventDefault();
   const err = $('#a_err'); err.className = 'err'; err.textContent = '';
   const login = $('#a_user').value.trim().toLowerCase().replace(/^@/, ''), password = $('#a_pass').value;
+  if (login.includes('@')) { err.textContent = t('err_nick_fmt'); return; }
   if (!login || password.length < 6) { err.textContent = t('err_fill'); return; }
   const btn = $('#authForm button[type=submit]'); btn.disabled = true;
   try {
     if (authMode === 'login') {
-      const email = login.includes('@') ? login : login + LOGIN_DOMAIN; // старые аккаунты с почтой тоже работают
+      const email = login + LOGIN_DOMAIN; // внутренний технический адрес; пользователь вводит только ник
       lsSet('msg_remember', $('#a_rem').checked ? 'true' : 'false');
       lsSet('msg_last_login', login);
       markAlive();
