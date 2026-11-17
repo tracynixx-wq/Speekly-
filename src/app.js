@@ -622,7 +622,7 @@ async function onAuthSubmit(e) {
       markAlive();
       S.pw = password; // нужен только на время входа, чтобы разблокировать ключ шифрования
       const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) { S.pw = null; err.textContent = error.message.includes('Invalid') ? t('err_creds') : error.message; }
+      if (error) { S.pw = null; err.textContent = /email not confirmed/i.test(error.message) ? t('msg_confirm') : (error.message.includes('Invalid') ? t('err_creds') : error.message); }
     } else {
       if (!/^[a-z0-9_]{3,20}$/.test(login)) { err.textContent = t('err_nick_fmt'); return; }
       if (password !== $('#a_pass2').value) { err.textContent = t('err_pass_match'); return; }
