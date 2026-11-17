@@ -19,8 +19,10 @@ revoke all on sequence public.user_blocks_id_seq from public, anon, authenticate
 grant usage, select on sequence public.user_blocks_id_seq to authenticated;
 
 drop policy if exists "user_blocks: read own" on public.user_blocks;
-create policy "user_blocks: read own" on public.user_blocks
-  for select to authenticated using (blocker_id = (select auth.uid()));
+drop policy if exists "user_blocks: read involving me" on public.user_blocks;
+create policy "user_blocks: read involving me" on public.user_blocks
+  for select to authenticated
+  using (blocker_id = (select auth.uid()) or blocked_id = (select auth.uid()));
 
 drop policy if exists "user_blocks: insert own" on public.user_blocks;
 create policy "user_blocks: insert own" on public.user_blocks
