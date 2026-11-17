@@ -13,6 +13,8 @@ create table if not exists public.user_blocks (
 create index if not exists user_blocks_blocked_idx on public.user_blocks (blocked_id);
 
 alter table public.user_blocks enable row level security;
+grant select, insert, delete on public.user_blocks to authenticated;
+grant usage, select on sequence public.user_blocks_id_seq to authenticated;
 
 drop policy if exists "user_blocks: read own" on public.user_blocks;
 create policy "user_blocks: read own" on public.user_blocks
