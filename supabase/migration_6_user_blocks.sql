@@ -22,7 +22,7 @@ create policy "user_blocks: read own" on public.user_blocks
 
 drop policy if exists "user_blocks: insert own" on public.user_blocks;
 create policy "user_blocks: insert own" on public.user_blocks
-  for insert to authenticated with check (blocker_id = (select auth.uid()));
+  for insert to authenticated with check (blocker_id = (select auth.uid()) and blocked_id <> (select auth.uid()));
 
 drop policy if exists "user_blocks: delete own" on public.user_blocks;
 create policy "user_blocks: delete own" on public.user_blocks
