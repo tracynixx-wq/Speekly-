@@ -1,6 +1,6 @@
 {
   "name": "speekly-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Speekly — десктопный мессенджер на Supabase",
   "main": "main.js",
   "author": "you",
@@ -11,7 +11,8 @@
     "test": "node tests/crypto.test.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "electron-updater": "^6.6.2"
   },
   "devDependencies": {
     "electron": "^33.2.0",
@@ -32,6 +33,12 @@
       "output": "dist",
       "buildResources": "build"
     },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://yspametgketxgobmmsei.supabase.co/storage/v1/object/public/speekly-updates/"
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "build/icon.png"
