@@ -677,7 +677,7 @@ function stop() {
   keyCache.clear();
   blobCache.forEach(p => p.then(u => URL.revokeObjectURL(u)).catch(() => {}));
   blobCache.clear();
-  Object.assign(S, { priv: null, privJwk: null, pubStr: null, hasBackup: false, pw: null, authEmail: null, me: null, profs: {}, friends: [], incoming: [], outgoing: [], msgs: {}, active: null, view: null, tab: 'chats', stab: 'appearance', editing: false, draft: null, online: new Set(), dbChannel: null, presence: null, timer: null, sideTab: null });
+  Object.assign(S, { priv: null, privJwk: null, pubStr: null, hasBackup: false, pw: null, authEmail: null, me: null, profs: {}, friends: [], incoming: [], outgoing: [], blocked: [], msgs: {}, active: null, view: null, tab: 'chats', stab: 'appearance', editing: false, draft: null, online: new Set(), dbChannel: null, presence: null, timer: null, sideTab: null });
   updateTitle();
 }
 async function loadFriends() {
@@ -739,7 +739,7 @@ function subscribe() {
     .on('presence', { event: 'sync' }, () => {
       S.online = new Set(Object.keys(S.presence.presenceState()));
       renderSide(); renderChatHeader();
-      if (S.tab === 'friends') renderFriendCard();
+      if (S.tab === 'friends') renderPersonCard();
     })
     .subscribe(async status => {
       if (status === 'SUBSCRIBED' && S.settings.show_online) await S.presence.track({ at: Date.now() });
@@ -955,7 +955,7 @@ async function addFriend(id) {
     return;
   }
   toast(t('req_sent'));
-  await loadFriends(); renderRail(); fillFriends();
+  await loadFriends(); renderRail(); renderPersonCard();
   const inp = $('#fsearch'); if (inp) onSearchInput({ target: inp });
 }
 async function acceptFriend(fid) {
