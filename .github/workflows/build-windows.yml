@@ -21,6 +21,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -28,15 +29,47 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Build installer
+      - name: Build installer and update metadata
         run: npm run dist
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: Speekly-setup
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Publish automatic update files to Supabase Storage
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_URL) -or [string]::IsNullOrWhiteSpace($env:SUPABASE_SERVICE_ROLE_KEY)) {
+            throw "Add GitHub Actions secrets SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable automatic updates."
+          }
+
+          $headers = @{
+            apikey = $env:SUPABASE_SERVICE_ROLE_KEY
+            Authorization = "Bearer $env:SUPABASE_SERVICE_ROLE_KEY"
+            "x-upsert" = "true"
+          }
+
+          $files = Get-ChildItem -Path "dist" -File | Where-Object {
+            $_.Name -eq "latest.yml" -or $_.Extension -eq ".exe" -or $_.Extension -eq ".blockmap"
+          }
+
+          foreach ($file in $files) {
+            $encodedName = [System.Uri]::EscapeDataString($file.Name)
+            $url = "$($env:SUPABASE_URL.TrimEnd('/'))/storage/v1/object/speekly-updates/$encodedName"
+            $contentType = if ($file.Extension -eq ".yml") { "text/yaml" } elseif ($file.Extension -eq ".exe") { "application/vnd.microsoft.portable-executable" } else { "application/octet-stream" }
+            Invoke-RestMethod -Method Post -Uri $url -Headers $headers -ContentType $contentType -InFile $file.FullName
+            Write-Host "Published $($file.Name)"
+          }
 
       - name: Publish installer to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
