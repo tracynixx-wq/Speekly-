@@ -27,7 +27,7 @@ const I18N = {
     req_blocked: 'Этот пользователь не принимает заявки в друзья', req_exists: 'Заявка уже существует',
     error: 'Ошибка: {0}', pick_friend: 'Выбери друга слева,<br>чтобы посмотреть профиль',
     write: 'Написать', unfriend: 'Удалить из друзей', confirm_unfriend: 'Удалить из друзей?',
-    no_bio: 'Нет описания', notif_req: 'Заявка в друзья', notif_req_body: '{0} хочет добавить вас в друзья',
+    search_people_hint: 'Найди человека по нику, чтобы открыть его профиль.', view_profile: 'Профиль', person_message: 'Написать', person_request: 'Отправить заявку', person_accept: 'Принять заявку', person_block: 'Заблокировать', person_unblock: 'Разблокировать', person_block_confirm: 'Заблокировать этого пользователя?', no_bio: 'Нет описания', notif_req: 'Заявка в друзья', notif_req_body: '{0} хочет добавить вас в друзья',
     new_message: 'Новое сообщение',
     online: 'в сети', offline: 'не в сети', seen_at: 'был(а) в {0}', seen_yday: 'был(а) вчера в {0}',
     seen_date: 'был(а) {0} в {1}', today: 'Сегодня', yesterday: 'Вчера',
@@ -116,7 +116,7 @@ const I18N = {
     req_blocked: "This user doesn't accept friend requests", req_exists: 'A request already exists',
     error: 'Error: {0}', pick_friend: 'Pick a friend on the left<br>to see their profile',
     write: 'Message', unfriend: 'Remove friend', confirm_unfriend: 'Remove from friends?',
-    no_bio: 'No description', notif_req: 'Friend request', notif_req_body: '{0} wants to add you as a friend',
+    search_people_hint: 'Search by username to open someone’s profile.', view_profile: 'View profile', person_message: 'Message', person_request: 'Send request', person_accept: 'Accept request', person_block: 'Block', person_unblock: 'Unblock', person_block_confirm: 'Block this user?', no_bio: 'No description', notif_req: 'Friend request', notif_req_body: '{0} wants to add you as a friend',
     new_message: 'New message',
     online: 'online', offline: 'offline', seen_at: 'last seen at {0}', seen_yday: 'last seen yesterday at {0}',
     seen_date: 'last seen {0} at {1}', today: 'Today', yesterday: 'Yesterday',
@@ -204,7 +204,7 @@ const DEFAULTS = {
 };
 const S = {
   me: null, settings: { ...DEFAULTS }, profs: {},
-  friends: [], incoming: [], outgoing: [],
+  friends: [], incoming: [], outgoing: [], blocked: [],
   msgs: {}, active: null, view: null,
   tab: 'chats', stab: 'appearance', editing: false, draft: null,
   online: new Set(), dbChannel: null, presence: null, timer: null,
@@ -661,6 +661,7 @@ async function start(session) {
   S.authEmail = session.user.email;
   try { await initKeys(); } catch (e) { toast(t('error', e.message)); } finally { S.pw = null; }
   await loadFriends();
+  await loadBlocked();
   await loadMessages(); // расшифровка нужна ключи и профили друзей, поэтому строго после них
   renderApp();
   subscribe();
@@ -852,6 +853,65 @@ function fillFriends() {
     : `<div class="empty small">${esc(t('list_empty'))}</div>`;
   box.innerHTML = h;
 }
+
+// ---- публичный профиль из поиска ----
+function fillPeopleSelection() {
+  const input = $('#fsearch');
+  if (input && input.value.trim()) onSearchInput({ target: input });
+}
+function renderPersonCard() {
+  const main = $('#main');
+  const p = S.view && S.profs[S.view];
+  if (!p) {
+    main.innerHTML = `<div class="empty">${esc(t('search_people_hint'))}</div>`;
+    return;
+  }
+  const isBlocked = (S.blocked || []).includes(p.id);
+  const accepted = S.friends.some(x => x.id === p.id);
+  const incoming = S.incoming.find(x => x.id === p.id);
+  const outgoing = S.outgoing.some(x => x.id === p.id);
+  const st = statusInfo(p);
+  const actions = isBlocked
+    ? `<button class="btn ghost" data-act="unblock" data-id="${p.id}">${esc(t('person_unblock'))}</button>`
+    : `${accepted
+        ? `<button class="btn" data-act="message" data-id="${p.id}">${esc(t('person_message'))}</button>`
+        : incoming
+          ? `<button class="btn" data-act="accept" data-id="${incoming.fid}">${esc(t('person_accept'))}</button>`
+          : outgoing
+            ? `<span class="hint">${esc(t('st_sent'))}</span>`
+            : `<button class="btn" data-act="add" data-id="${p.id}">${esc(t('person_request'))}</button>`}
+      <button class="btn danger" data-act="block" data-id="${p.id}">${esc(t('person_block'))}</button>`;
+  main.innerHTML = `<div class="page wide">
+    <div class="public-profile">
+      <div class="pbanner">${p.banner_url ? `<img class="bimg" src="${esc(p.banner_url)}" alt="">` : ''}<div class="pshade"></div>
+        <div class="pinfo">${avatar(p, 76, st.on)}<div class="ptext"><div class="pname"><span>${esc(name(p))}</span>${p.verified ? VERIFIED() : ''}</div>
+        <div class="puser">@${esc(p.username)}</div><div class="pstat">${esc(st.text)}</div></div></div></div>
+      <div class="pbio">${esc(p.bio || t('no_bio'))}</div>
+      <div class="center">${actions}</div>
+    </div></div>`;
+}
+async function blockPerson(id) {
+  if (!confirm(t('person_block_confirm'))) return;
+  const { error } = await sb.from('user_blocks').insert({ blocker_id: S.me.id, blocked_id: id });
+  if (error && error.code !== '23505') return toast(t('error', error.message));
+  const rel = [...S.friends, ...S.incoming, ...S.outgoing].find(x => x.id === id);
+  if (rel && rel.fid) await sb.from('friendships').delete().eq('id', rel.fid);
+  S.blocked = [...new Set([...(S.blocked || []), id])];
+  await loadFriends();
+  renderRail(); renderSide(); renderPersonCard();
+}
+async function unblockPerson(id) {
+  const { error } = await sb.from('user_blocks').delete().eq('blocker_id', S.me.id).eq('blocked_id', id);
+  if (error) return toast(t('error', error.message));
+  S.blocked = (S.blocked || []).filter(x => x !== id);
+  renderPersonCard();
+}
+async function loadBlocked() {
+  const { data, error } = await sb.from('user_blocks').select('blocked_id').eq('blocker_id', S.me.id);
+  if (error) { console.warn('[Speekly blocks]', error.message); S.blocked = []; return; }
+  S.blocked = (data || []).map(x => x.blocked_id);
+}
+
 function settingsTabs() {
   return [['appearance', '🎨', t('s_appearance')], ['notifications', '🔔', t('s_notifications')], ['privacy', '🔒', t('s_privacy')], ['chats', '💬', t('s_chats')], ['account', '🔑', t('s_account')]];
 }
@@ -1239,7 +1299,7 @@ root.addEventListener('click', async e => {
   if (d.lang) { setSetting('lang', d.lang); }
   else if (d.mode) { authMode = d.mode; renderAuth(); }
   else if (d.acc) switchAccount(d.acc);
-  else if (d.nav) { S.tab = d.nav; S.sideTab = null; renderRail(); renderSide(); renderMain(); }
+  else if (d.nav) { S.tab = d.nav; S.sideTab = null; if (d.nav === 'friends') S.view = null; renderRail(); renderSide(); renderMain(); }
   else if (d.chat) openChat(d.chat);
   else if (d.person) { S.view = d.person; renderPersonCard(); fillPeopleSelection(); }
   else if (d.stab) { S.stab = d.stab; fillSettingsList(); renderMain(); }
@@ -1249,6 +1309,8 @@ root.addEventListener('click', async e => {
     switch (d.act) {
       case 'add': addFriend(d.id); break;
       case 'accept': acceptFriend(Number(d.id)); break;
+      case 'block': blockPerson(d.id); break;
+      case 'unblock': unblockPerson(d.id); break;
       case 'remove': removeFriendship(Number(d.id)); break;
       case 'unfriend': if (confirm(t('confirm_unfriend'))) removeFriendship(Number(d.id)); break;
       case 'message': openChat(d.id); break;
