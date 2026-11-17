@@ -419,6 +419,7 @@ async function sendEnc(to, text, file) {
   data.dec = { body: text, file: file || null, enc: true };
   const list = (S.msgs[to] = S.msgs[to] || []);
   if (!list.some(x => x.id === data.id)) list.push(data);
+  if (!S.friends.some(x => x.id === to) && S.profs[to]) S.friends.push({ ...S.profs[to], direct: true });
   if (S.tab === 'chats' && S.active === to) renderMessages();
   renderSide();
   return true;
@@ -704,6 +705,13 @@ async function loadMessages() {
     const o = m.sender === S.me.id ? m.recipient : m.sender;
     (S.msgs[o] = S.msgs[o] || []).push(m);
   });
+  // Populate the chat list from actual conversations, including people not in contacts.
+  const peers = Object.keys(S.msgs);
+  await Promise.all(peers.map(id => loadProfile(id)));
+  peers.forEach(id => {
+    const p = S.profs[id];
+    if (p && !S.friends.some(x => x.id === id)) S.friends.push({ ...p, direct: true });
+  });
 }
 function patchProfile(id, patch) {
   if (S.profs[id]) Object.assign(S.profs[id], patch);
@@ -756,9 +764,10 @@ async function onMsgInsert(m) {
   list.push(m);
   if (m.recipient === S.me.id) {
     const looking = S.tab === 'chats' && S.active === o && document.hasFocus();
+    if (!S.profs[o]) await loadProfile(o);
+    if (S.profs[o] && !S.friends.some(x => x.id === o)) S.friends.push({ ...S.profs[o], direct: true });
     if (looking) { await markRead(o); }
     else {
-      if (!S.profs[o]) await loadFriends();
       showNotif(name(S.profs[o]), S.settings.preview ? prevText(m).slice(0, 120) : t('new_message'), () => { S.tab = 'chats'; openChat(o); });
     }
   }
@@ -867,20 +876,11 @@ function renderPersonCard() {
     return;
   }
   const isBlocked = (S.blocked || []).includes(p.id);
-  const accepted = S.friends.some(x => x.id === p.id);
-  const incoming = S.incoming.find(x => x.id === p.id);
-  const outgoing = S.outgoing.some(x => x.id === p.id);
   const st = statusInfo(p);
   const actions = isBlocked
     ? `<button class="btn ghost" data-act="unblock" data-id="${p.id}">${esc(t('person_unblock'))}</button>`
-    : `${accepted
-        ? `<button class="btn" data-act="message" data-id="${p.id}">${esc(t('person_message'))}</button>`
-        : incoming
-          ? `<button class="btn" data-act="accept" data-id="${incoming.fid}">${esc(t('person_accept'))}</button>`
-          : outgoing
-            ? `<span class="hint">${esc(t('st_sent'))}</span>`
-            : `<button class="btn" data-act="add" data-id="${p.id}">${esc(t('person_request'))}</button>`}
-      <button class="btn danger" data-act="block" data-id="${p.id}">${esc(t('person_block'))}</button>`;
+    : `<button class="btn" data-act="message" data-id="${p.id}">${esc(t('person_message'))}</button>
+       <button class="btn danger" data-act="block" data-id="${p.id}">${esc(t('person_block'))}</button>`;
   main.innerHTML = `<div class="page wide">
     <div class="public-profile">
       <div class="pbanner">${p.banner_url ? `<img class="bimg" src="${esc(p.banner_url)}" alt="">` : ''}<div class="pshade"></div>
