@@ -41,6 +41,9 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Check application syntax
+        run: node --check src/app.js
+
       - name: Run tests
         run: npm test
 
