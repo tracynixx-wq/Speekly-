@@ -1,6 +1,6 @@
 {
   "name": "speekly-desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Speekly — десктопный мессенджер на Supabase",
   "main": "main.js",
   "author": "you",
@@ -36,8 +36,9 @@
     },
     "publish": [
       {
-        "provider": "generic",
-        "url": "https://yspametgketxgobmmsei.supabase.co/storage/v1/object/public/speekly-updates/"
+        "provider": "github",
+        "owner": "tracynixx-wq",
+        "repo": "Speekly-"
       }
     ],
     "win": {
