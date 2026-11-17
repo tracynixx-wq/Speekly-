@@ -46,15 +46,12 @@ create policy "friendships: send request" on public.friendships for insert to au
   );
 
 drop policy if exists "messages: send to friends" on public.messages;
-create policy "messages: send to friends" on public.messages for insert to authenticated
+drop policy if exists "messages: send direct" on public.messages;
+create policy "messages: send direct" on public.messages
+  for insert to authenticated
   with check (
     sender = (select auth.uid())
-    and exists (
-      select 1 from public.friendships f
-      where f.status = 'accepted'
-        and ((f.requester = (select auth.uid()) and f.addressee = recipient)
-          or (f.addressee = (select auth.uid()) and f.requester = recipient))
-    )
+    and recipient <> (select auth.uid())
     and not exists (
       select 1 from public.user_blocks b
       where (b.blocker_id = (select auth.uid()) and b.blocked_id = recipient)
