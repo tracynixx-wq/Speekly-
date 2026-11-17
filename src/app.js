@@ -661,8 +661,8 @@ async function start(session) {
   saveLocalSettings(); applySettings(); syncAccountMeta();
   S.authEmail = session.user.email;
   try { await initKeys(); } catch (e) { toast(t('error', e.message)); } finally { S.pw = null; }
-  await loadFriends();
   await loadBlocked();
+  await loadFriends();
   await loadMessages(); // расшифровка нужна ключи и профили друзей, поэтому строго после них
   renderApp();
   subscribe();
@@ -684,6 +684,7 @@ function stop() {
 async function loadFriends() {
   const { data: fr, error } = await sb.from('friendships').select('*');
   if (error) { toast(t('load_err_friends', error.message)); return; }
+  const directPeers = S.friends.filter(p => p.direct && !(S.blocked || []).includes(p.id));
   const other = f => (f.requester === S.me.id ? f.addressee : f.requester);
   const ids = [...new Set(fr.map(other))];
   if (ids.length) {
@@ -691,6 +692,7 @@ async function loadFriends() {
     (data || []).forEach(p => { S.profs[p.id] = p; });
   }
   S.friends = fr.filter(f => f.status === 'accepted' && S.profs[other(f)]).map(f => ({ ...S.profs[other(f)], fid: f.id }));
+  directPeers.forEach(p => { if (!S.friends.some(x => x.id === p.id)) S.friends.push(p); });
   S.incoming = fr.filter(f => f.status === 'pending' && f.addressee === S.me.id && S.profs[f.requester]).map(f => ({ ...S.profs[f.requester], fid: f.id }));
   S.outgoing = fr.filter(f => f.status === 'pending' && f.requester === S.me.id && S.profs[f.addressee]).map(f => ({ ...S.profs[f.addressee], fid: f.id }));
   if (S.active && !S.friends.some(f => f.id === S.active)) S.active = null;
@@ -710,7 +712,7 @@ async function loadMessages() {
   await Promise.all(peers.map(id => loadProfile(id)));
   peers.forEach(id => {
     const p = S.profs[id];
-    if (p && !S.friends.some(x => x.id === id)) S.friends.push({ ...p, direct: true });
+    if (p && !(S.blocked || []).includes(id) && !S.friends.some(x => x.id === id)) S.friends.push({ ...p, direct: true });
   });
 }
 function patchProfile(id, patch) {
