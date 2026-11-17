@@ -41,8 +41,10 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Check application syntax
+      - name: Check main process syntax
         run: node --check main.js
+
+      - name: Check preload syntax
         run: node --check preload.js
 
       - name: Check renderer syntax
