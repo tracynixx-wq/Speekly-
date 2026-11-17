@@ -21,6 +21,7 @@
   "build": {
     "appId": "com.speekly.desktop",
     "productName": "Speekly",
+    "artifactName": "Speekly-Setup.${ext}",
     "files": [
       "main.js",
       "preload.js",
