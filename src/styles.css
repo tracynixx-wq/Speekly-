@@ -81,6 +81,8 @@ svg { flex: none; }
 .rnav.on { color: var(--accent); }
 .rnav span { font-weight: 800; letter-spacing: .01em; }
 .rnav { font-weight: 700; }
+.side-h { font-weight: 900; }
+.tabs button, .seg button { font-weight: 750; }
 
 .rnav.on::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
 .badge-dot { position: absolute; top: 6px; right: 22px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #fff; font-size: .7rem; line-height: 18px; }
