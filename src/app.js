@@ -696,7 +696,7 @@ async function loadFriends() {
   S.incoming = fr.filter(f => f.status === 'pending' && f.addressee === S.me.id && S.profs[f.requester]).map(f => ({ ...S.profs[f.requester], fid: f.id }));
   S.outgoing = fr.filter(f => f.status === 'pending' && f.requester === S.me.id && S.profs[f.addressee]).map(f => ({ ...S.profs[f.addressee], fid: f.id }));
   if (S.active && !S.friends.some(f => f.id === S.active)) S.active = null;
-  if (S.view && !S.friends.some(f => f.id === S.view)) S.view = null;
+  if (S.view && !S.profs[S.view]) S.view = null;
 }
 async function loadMessages() {
   const { data, error } = await sb.from('messages').select('*').order('created_at', { ascending: false }).limit(1000);
