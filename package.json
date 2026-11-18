@@ -28,8 +28,7 @@
       "src/**/*",
       "build/icon.png",
       "node_modules/**/*",
-      "package.json",
-      "build/icon.ico"
+      "package.json"
     ],
     "directories": {
       "output": "dist",
