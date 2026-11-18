@@ -1,6 +1,6 @@
 {
   "name": "speekly-desktop",
-  "version": "1.0.9",
+  "version": "1.3.1",
   "description": "Speekly — десктопный мессенджер на Supabase",
   "main": "main.js",
   "author": "you",
@@ -27,6 +27,7 @@
       "preload.js",
       "src/**/*",
       "build/icon.png",
+      "build/icon.ico",
       "node_modules/**/*",
       "package.json"
     ],
@@ -43,11 +44,15 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.png"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": true,
-      "perMachine": false
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "shortcutName": "Speekly"
     }
   }
 }

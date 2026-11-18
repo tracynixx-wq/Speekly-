@@ -157,7 +157,7 @@ function createWindow() {
     height: 740,
     minWidth: 820,
     minHeight: 540,
-    backgroundColor: '#16151a',
+    backgroundColor: '#0a2a9a',
     autoHideMenuBar: true,
     title: 'Speekly',
     icon: path.join(__dirname, 'build', 'icon.png'),
@@ -203,6 +203,8 @@ app.on('before-quit', () => {
   if (updateCheckTimer) clearInterval(updateCheckTimer);
 });
 app.on('window-all-closed', () => app.quit());
+
+ipcMain.on('app-version', (event) => { event.returnValue = app.getVersion(); });
 
 ipcMain.on('focus-window', () => {
   if (!win) return;

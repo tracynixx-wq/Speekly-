@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
-  focus: () => ipcRenderer.send('focus-window')
+  focus: () => ipcRenderer.send('focus-window'),
+  version: ipcRenderer.sendSync('app-version')
 });
