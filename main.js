@@ -1,10 +1,15 @@
-const { app, BrowserWindow, ipcMain, shell, Menu, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, dialog, session, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
 if (!app.requestSingleInstanceLock()) app.quit();
 app.setAppUserModelId('com.speekly.desktop');
+
+// Improve rendering on supported Windows graphics drivers.
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
 
 let win;
 let updateCheckTimer;
@@ -160,7 +165,8 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      backgroundThrottling: false
     }
   });
   Menu.setApplicationMenu(null);
@@ -182,6 +188,13 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(() => {
+  // Provide the screen source requested by the in-app WebRTC screen-sharing flow.
+  session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+    desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+      if (sources && sources.length) callback({ video: sources[0] });
+      else callback({});
+    }).catch(() => callback({}));
+  });
   createWindow();
   configureAutoUpdates();
 });
