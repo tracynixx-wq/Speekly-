@@ -1,6 +1,6 @@
 {
   "name": "speekly-desktop",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Speekly — десктопный мессенджер на Supabase",
   "main": "main.js",
   "author": "you",
@@ -28,7 +28,8 @@
       "src/**/*",
       "build/icon.png",
       "node_modules/**/*",
-      "package.json"
+      "package.json",
+      "build/icon.ico"
     ],
     "directories": {
       "output": "dist",
