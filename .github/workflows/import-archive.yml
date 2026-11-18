@@ -1,0 +1,45 @@
+name: Import Speekly archive
+
+on:
+  push:
+    paths:
+      - '.github/workflows/import-archive.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract uploaded archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="Speekly-1.3.1-corrected.zip"
+          test -f "$ARCHIVE"
+          mkdir -p /tmp/speekly-import
+          unzip -q "$ARCHIVE" -d /tmp/speekly-import
+          test -f /tmp/speekly-import/package.json
+          test -f /tmp/speekly-import/src/app.js
+          test -f /tmp/speekly-import/src/styles.css
+          rsync -a --exclude='.git' /tmp/speekly-import/ ./
+          rm -f "$ARCHIVE"
+
+      - name: Commit extracted project files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No extracted changes to commit."
+            exit 0
+          fi
+          git commit -m "Import Speekly 1.3.1 project files"
+          git push
