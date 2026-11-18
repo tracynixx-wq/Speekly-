@@ -1,3 +1,4 @@
+# Build the Windows installer from the current main branch contents.
 name: Build Windows exe
 
 on:
