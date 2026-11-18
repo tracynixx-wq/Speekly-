@@ -644,8 +644,14 @@ async function onAuthSubmit(e) {
       lsSet('msg_remember', 'true'); lsSet('msg_last_login', login); markAlive();
       S.pw = password;
       const { data, error } = await sb.auth.signUp({ email: login + LOGIN_DOMAIN, password, options: { data: { username: login } } });
-      if (error) { S.pw = null; err.textContent = /database|already|registered/i.test(error.message) ? t('err_taken') : error.message; }
-      else if (!data.session) { S.pw = null; err.className = 'err ok'; err.textContent = t('msg_confirm'); }
+      if (error) {
+        S.pw = null;
+        if (error.code === '23505' || /already registered|user already exists/i.test(error.message)) err.textContent = t('err_taken');
+        else if (/database error saving new user/i.test(error.message)) err.textContent = S.settings.lang === 'ru'
+          ? 'Supabase не смог создать профиль. Проверь SQL-функцию handle_new_user и триггер on_auth_user_created в базе.'
+          : 'Supabase could not create the profile. Check the handle_new_user SQL function and on_auth_user_created trigger.';
+        else err.textContent = error.message;
+      } else if (!data.session) { S.pw = null; err.className = 'err ok'; err.textContent = t('msg_confirm'); }
     }
   } finally { btn.disabled = false; }
 }
